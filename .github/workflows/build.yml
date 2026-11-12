@@ -1,0 +1,23 @@
+name: Build Hominhtuan95 EXE
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Check syntax
+        run: python -m py_compile Hominhtuan95.py
+      - name: Build EXE without console
+        run: python -m PyInstaller --clean --onefile --windowed --name Hominhtuan95 --collect-submodules pynput Hominhtuan95.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Hominhtuan95_Macro_1CuaSo_EXE
+          path: dist/Hominhtuan95.exe
