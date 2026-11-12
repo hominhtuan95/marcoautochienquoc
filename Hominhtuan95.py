@@ -183,16 +183,43 @@ class App:
             return
         self.playing = True
         self.stop_event = threading.Event()
-        self.info.set('Đang phát Macro. F10 để dừng.')
+        repeat = self.loop.get()  # Tkinter variables are only read on the UI thread.
         self.play_btn.config(state='disabled')
-        threading.Thread(target=self._play, args=(speed, self.stop_event), daemon=True).start()
+        self.info.set('Chuẩn bị phát Macro...')
+        threading.Thread(target=self._play, args=(speed, repeat, self.stop_event), daemon=True).start()
 
-    def _play(self, speed, stop):
+    def _ui_info(self, value):
+        try:
+            self.root.after(0, lambda: self.info.set(value))
+        except RuntimeError:
+            pass
+
+    def _play(self, speed, repeat, stop):
         kctl, mctl = keyboard.Controller(), mouse.Controller()
         deadline = time.monotonic() + MAX_SECONDS
         events = list(self.events)
+        held_keys = []
+        held_buttons = []
+        error = None
         try:
-            with keyboard.Listener(on_press=lambda k: stop.set() if k == keyboard.Key.f10 else None) as hotkey:
+            with keyboard.Listener(on_press=lambda k: stop.set() if k == keyboard.Key.f10 else None):
+                # Give Windows time to close the button interaction and activate the game.
+                for remaining in (3, 2, 1):
+                    self._ui_info(f'Bắt đầu sau {remaining} giây... (F10 để dừng)')
+                    if stop.wait(1):
+                        return
+
+                # Restore the game if minimized, then request focus.
+                if user32.IsIconic(self.target):
+                    user32.ShowWindow(self.target, 9)  # SW_RESTORE
+                user32.SetForegroundWindow(self.target)
+                if stop.wait(0.35):
+                    return
+                if foreground() != self.target:
+                    self._ui_info('Không kích hoạt được game. Hãy đưa game lên trước rồi nhấn PHÁT lại.')
+                    return
+                self._ui_info('Đang phát Macro. Nhấn F10 để dừng.')
+
                 while not stop.is_set() and time.monotonic() < deadline:
                     start = time.monotonic()
                     for ev in events:
@@ -201,40 +228,71 @@ class App:
                             break
                         if stop.is_set() or time.monotonic() >= deadline:
                             break
-                        # Foreground mode is intentional: pynput controls the actual cursor/keyboard.
                         if foreground() != self.target:
+                            self._ui_info('Đã dừng: cửa sổ game không còn được chọn.')
                             stop.set()
                             break
                         kind = ev['type']
                         if kind in ('key_down', 'key_up'):
                             key = key_decode(ev['key'])
                             if key is not None:
-                                (kctl.press if kind == 'key_down' else kctl.release)(key)
+                                if kind == 'key_down':
+                                    kctl.press(key)
+                                    held_keys.append(key)
+                                else:
+                                    kctl.release(key)
+                                    if key in held_keys:
+                                        held_keys.remove(key)
                         elif kind in ('move', 'click', 'scroll'):
                             x, y = screen_xy(self.target, ev['x'], ev['y'])
                             mctl.position = (x, y)
                             if kind == 'click':
                                 btn = getattr(mouse.Button, ev['button'], None)
                                 if btn:
-                                    (mctl.press if ev['pressed'] else mctl.release)(btn)
+                                    if ev['pressed']:
+                                        mctl.press(btn)
+                                        held_buttons.append(btn)
+                                    else:
+                                        mctl.release(btn)
+                                        if btn in held_buttons:
+                                            held_buttons.remove(btn)
                             elif kind == 'scroll':
                                 mctl.scroll(ev['dx'], ev['dy'])
-                    if not self.loop.get():
+                    if not repeat:
                         break
                     if not events or events[-1]['t'] == 0:
                         if stop.wait(0.1):
                             break
         except Exception as exc:
-            msg = str(exc)
-            self.root.after(0, lambda: messagebox.showerror('Lỗi phát Macro', msg))
+            error = str(exc)
         finally:
-            self.root.after(0, lambda: self._finished(stop))
+            # Do not leave pressed keys or mouse buttons held after stopping.
+            for key in reversed(held_keys):
+                try:
+                    kctl.release(key)
+                except Exception:
+                    pass
+            for btn in reversed(held_buttons):
+                try:
+                    mctl.release(btn)
+                except Exception:
+                    pass
+            if error:
+                try:
+                    self.root.after(0, lambda msg=error: messagebox.showerror('Lỗi phát Macro', msg))
+                except RuntimeError:
+                    pass
+            try:
+                self.root.after(0, lambda: self._finished(stop))
+            except RuntimeError:
+                pass
 
     def _finished(self, stop):
         if self.stop_event is stop:
             self.playing = False
             self.play_btn.config(state='normal')
-            self.info.set('Đã dừng Macro.')
+            if self.info.get().startswith(('Đang phát', 'Bắt đầu', 'Chuẩn bị')):
+                self.info.set('Đã dừng Macro.')
 
     def stop_play(self):
         self.stop_event.set()

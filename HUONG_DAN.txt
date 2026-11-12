@@ -1,17 +1,15 @@
-HOMINHTUAN95 - MACRO 1 CUA SO (CHUOT + BAN PHIM)
+HOMINHTUAN95 - SUA LOI MACRO DUNG NGAY KHI PHAT
 
-1. Cai Python tren Windows va chay: python -m pip install -r requirements.txt
-2. Chay: python Hominhtuan95.py
-3. Mo game, nhan 'Chon cua so game dang mo', nhan OK, sau do click vao game trong 3 giay.
-4. Nhan BAT DAU GHI, chuyen sang game, thao tac chuot/ban phim, quay lai nhan DUNG GHI.
-5. Nhan PHAT MACRO, chuyen ngay sang game. Macro chi phat khi game dang la cua so duoc chon (foreground).
-6. Nhan F10 de dung Macro. Macro co the luu/mo JSON. Gioi han phat 3 gio.
-7. Build EXE: upload Hominhtuan95.py, requirements.txt va .github/workflows/build.yml len GitHub, vao Actions -> Run workflow, tai Artifacts.
+1. Chon cua so game.
+2. Ghi macro va dung ghi.
+3. Nhan PHAT MACRO, doi dem nguoc 3 giay.
+4. Phan mem se yeu cau Windows kich hoat game truoc khi phat.
+5. F10 de dung. Neu game khong duoc dua len truoc, hay chon game va thu lai.
 
-QUAN TRONG:
-- Macro dieu khien chuot va ban phim THUC, khong phat nen. Khong su dung may cho viec khac khi Macro dang phat.
-- Ghi chuot theo toa do client cua so game. Khong di chuyen/resize game khi dang ghi/phat.
-- Neu game chay Administrator, macro co the can chay Administrator.
-- Mot so game chan input gia lap; can thu tren game thuc te.
-- Phien ban nay CHUA tich hop HWID/ban quyen 6 thang. Khong thay the ban co ban quyen neu can giu kich hoat.
-- Chi dung Macro theo quy dinh cua game.
+DE BUILD EXE:
+- Tai Hominhtuan95.py, requirements.txt va .github/workflows/build.yml len GitHub.
+- Actions > Build Hominhtuan95 EXE > Run workflow.
+- Tai EXE trong Artifacts.
+
+Luu y: Macro dung chuot va ban phim that, chi phat tren cua so game dang hoat dong.
+Chua kiem thu truc tiep tren Windows/game Chien Quoc.
